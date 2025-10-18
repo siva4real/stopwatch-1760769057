@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Stopwatch</title>
+  <meta name="description" content="A minimal, accurate, bug-free stopwatch. Start, pause, resume, reset. No dependencies." />
+  <style>
+    :root {
+      --bg: #0f172a;         /* slate-900 */
+      --panel: #111827;      /* gray-900 */
+      --text: #e5e7eb;       /* gray-200 */
+      --muted: #94a3b8;      /* slate-400 */
+      --accent: #22c55e;     /* green-500 */
+      --accent-2: #3b82f6;   /* blue-500 */
+      --warn: #f59e0b;       /* amber-500 */
+      --danger: #ef4444;     /* red-500 */
+      --btn-bg: #1f2937;     /* gray-800 */
+      --btn-bg-disabled: #0b1220;
+      --btn-border: #374151; /* gray-700 */
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --radius: 14px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(1200px 800px at 50% -10%, #1e293b, #0b1020 70%, #080c19 100%);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--accent-2); }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px clamp(16px, 4vw, 32px);
+      gap: 12px;
+    }
+
+    .title {
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #f8fafc;
+      font-size: clamp(18px, 2.5vw, 22px);
+    }
+
+    .url-banner {
+      display: none;
+      gap: 8px;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.25);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .url-banner[data-visible="true"] { display: inline-flex; }
+    .url-banner .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent-2);
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+      flex: 0 0 auto;
+    }
+    .url-banner a {
+      color: #d1e3ff;
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(209,227,255,0.6);
+    }
+    .url-banner a:focus-visible {
+      outline: 2px solid var(--accent-2);
+      outline-offset: 2px;
+      border-bottom-style: solid;
+    }
+
+    main {
+      display: grid;
+      place-items: center;
+      padding: 24px clamp(16px, 4vw, 32px);
+    }
+
+    .card {
+      width: min(780px, 96vw);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)) border-box,
+                  linear-gradient(180deg, rgba(148,163,184,0.5), rgba(148,163,184,0.15)) padding-box;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148,163,184,0.25);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(20px, 4vw, 34px);
+    }
+
+    .display {
+      font-family: var(--mono);
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 1px;
+      user-select: none;
+      color: #f8fafc;
+      text-shadow: 0 2px 0 rgba(0,0,0,0.4);
+      line-height: 1.1;
+      font-size: clamp(40px, 9vw, 86px);
+    }
+    .display .ms {
+      color: #93c5fd;
+      font-size: 0.5em;
+      margin-left: 0.1em;
+      position: relative;
+      top: -0.03em;
+    }
+
+    .controls {
+      margin-top: clamp(16px, 3vw, 26px);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--btn-border);
+      background: var(--btn-bg);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font: 600 14px var(--font);
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+      min-width: 98px;
+    }
+    button:hover { background: #263242; }
+    button:active { transform: translateY(1px); }
+    button:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+
+    button.primary { background: linear-gradient(180deg, #16a34a, #15803d); border-color: #166534; }
+    button.primary:hover { background: linear-gradient(180deg, #22c55e, #16a34a); }
+    button.warn { background: linear-gradient(180deg, #f59e0b, #d97706); border-color: #b45309; }
+    button.warn:hover { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+    button.danger { background: linear-gradient(180deg, #ef4444, #b91c1c); border-color: #991b1b; }
+    button.danger:hover { background: linear-gradient(180deg, #f87171, #dc2626); }
+
+    button:disabled {
+      cursor: not-allowed;
+      background: var(--btn-bg-disabled);
+      color: #64748b;
+      border-color: #0f1a33;
+      box-shadow: none;
+      transform: none;
+    }
+
+    footer {
+      padding: 16px clamp(16px, 4vw, 32px);
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .sr-only {
+      position: absolute !important;
+      height: 1px; width: 1px;
+      overflow: hidden;
+      clip: rect(1px, 1px, 1px, 1px);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Stopwatch</div>
+      <div id="urlBanner" class="url-banner" aria-live="polite" aria-atomic="true" role="note" title="Provided via ?url parameter">
+        <span class="dot" aria-hidden="true"></span>
+        <span>External URL: </span>
+        <a id="urlLink" href="#" rel="noopener noreferrer" target="_blank"></a>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" aria-label="Stopwatch">
+        <div id="display" class="display" aria-live="off" aria-label="Elapsed time">
+          00:00:00<span class="ms">.00</span>
+        </div>
+
+        <div class="controls">
+          <button id="startBtn" class="primary" type="button" title="Start (S or Space)">Start</button>
+          <button id="pauseBtn" class="warn" type="button" title="Pause (P or Space)" disabled>Pause</button>
+          <button id="resumeBtn" class="primary" type="button" title="Resume (R or Space)" disabled>Resume</button>
+          <button id="resetBtn" class="danger" type="button" title="Reset (X)" disabled>Reset</button>
+        </div>
+
+        <div id="status" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+      </section>
+    </main>
+
+    <footer>
+      Keyboard: Space toggles start/pause/resume · S start · P pause · R resume · X reset
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // --- URL query parameter handling: ?url=https://example.com
+      (function handleUrlParam() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const raw = params.get('url');
+          const banner = document.getElementById('urlBanner');
+          const link = document.getElementById('urlLink');
+
+          if (!raw) return;
+
+          // URLSearchParams already decodes percent-encoding.
+          const u = new URL(raw);
+          const proto = u.protocol.toLowerCase();
+
+          if (proto === 'http:' || proto === 'https:') {
+            link.href = u.toString();
+            link.textContent = u.toString();
+            banner.setAttribute('data-visible', 'true');
+          }
+          // If protocol is not allowed, we silently ignore for safety.
+        } catch (e) {
+          // Invalid URL or other error: ignore silently to avoid breaking the app.
+        }
+      })();
+
+      // --- Stopwatch logic
+      const $ = (id) => document.getElementById(id);
+      const display = $('display');
+      const statusLive = $('status');
+
+      const startBtn = $('startBtn');
+      const pauseBtn = $('pauseBtn');
+      const resumeBtn = $('resumeBtn');
+      const resetBtn = $('resetBtn');
+
+      let running = false;
+      let startTime = 0;     // performance.now() at the last (re)start
+      let elapsed = 0;       // accumulated elapsed ms
+      let rafId = null;
+
+      function pad2(n) { return n.toString().padStart(2, '0'); }
+
+      function formatTime(ms) {
+        // Convert to centiseconds to keep .00 precision and avoid floating noise.
+        const totalCs = Math.floor(ms / 10);
+        const cs = totalCs % 100;
+        const totalSec = Math.floor(totalCs / 100);
+        const s = totalSec % 60;
+        const totalMin = Math.floor(totalSec / 60);
+        const m = totalMin % 60;
+        const h = Math.floor(totalMin / 60);
+        return `${pad2(h)}:${pad2(m)}:${pad2(s)}.<span class="ms">${pad2(cs)}</span>`;
+      }
+
+      function render() {
+        // Update the visible time text (keep HTML for small styled ms)
+        display.innerHTML = formatTime(elapsed);
+      }
+
+      function tick() {
+        if (!running) return;
+        const now = performance.now();
+        elapsed = now - startTime;
+        render();
+        rafId = requestAnimationFrame(tick);
+      }
+
+      function start() {
+        if (running) return;
+        startTime = performance.now() - elapsed; // support resume
+        running = true;
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(tick);
+        setButtonsState();
+        announce('Started');
+      }
+
+      function pause() {
+        if (!running) return;
+        running = false;
+        cancelAnimationFrame(rafId);
+        // elapsed is preserved; render to keep display precise
+        render();
+        setButtonsState();
+        announce('Paused');
+      }
+
+      function resume() {
+        if (running) return;
+        startTime = performance.now() - elapsed;
+        running = true;
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(tick);
+        setButtonsState();
+        announce('Resumed');
+      }
+
+      function reset() {
+        running = false;
+        cancelAnimationFrame(rafId);
+        elapsed = 0;
+        render();
+        setButtonsState();
+        announce('Reset to zero');
+      }
+
+      function setButtonsState() {
+        if (running) {
+          startBtn.disabled = true;
+          pauseBtn.disabled = false;
+          resumeBtn.disabled = true;
+          resetBtn.disabled = false;
+        } else {
+          const hasTime = elapsed > 0;
+          startBtn.disabled = hasTime;     // after a pause, use Resume instead of Start
+          pauseBtn.disabled = true;
+          resumeBtn.disabled = !hasTime;   // only enable resume if we have elapsed time
+          resetBtn.disabled = !hasTime;
+          // If nothing has happened yet, Start is enabled
+          if (!hasTime) {
+            startBtn.disabled = false;
+            resumeBtn.disabled = true;
+            resetBtn.disabled = true;
+          }
+        }
+      }
+
+      function announce(text) {
+        statusLive.textContent = text;
+      }
+
+      // Wire up events
+      startBtn.addEventListener('click', start);
+      pauseBtn.addEventListener('click', pause);
+      resumeBtn.addEventListener('click', resume);
+      resetBtn.addEventListener('click', reset);
+
+      // Keyboard shortcuts
+      // Space toggles: if running -> pause; else if elapsed>0 -> resume; else start
+      window.addEventListener('keydown', (e) => {
+        // Avoid interfering with inputs (none on this page), and ignore if modifier keys pressed
+        if (e.repeat) return;
+        const key = e.key.toLowerCase();
+
+        if (key === ' ') {
+          e.preventDefault();
+          if (running) pause();
+          else if (elapsed > 0) resume();
+          else start();
+        } else if (key === 's') {
+          start();
+        } else if (key === 'p') {
+          pause();
+        } else if (key === 'r') {
+          resume();
+        } else if (key === 'x' || key === 'delete') {
+          reset();
+        }
+      }, { passive: false });
+
+      // Initialize
+      render();
+      setButtonsState();
+
+      // Ensure cleanup on unload (not strictly necessary but tidy)
+      window.addEventListener('pagehide', () => cancelAnimationFrame(rafId));
+      document.addEventListener('visibilitychange', () => {
+        // No need to do anything special; performance.now based timing keeps accurate time.
+        // If desired, we could force a render on visibility gain:
+        if (document.visibilityState === 'visible' && !running) render();
+      });
+    })();
+  </script>
+</body>
+</html>
