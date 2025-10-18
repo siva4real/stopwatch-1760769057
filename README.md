@@ -5,6 +5,9 @@ This project is a minimal, production-ready stopwatch web application. It focuse
 
 Additionally, the app safely handles an optional `?url=` query parameter by showing a secure, external link if provided.
 
+Update (Round 2):
+- Theme: Converted to an ultra dark theme for deeper blacks and higher contrast while preserving accessibility and all functionality. This was achieved by adjusting color variables and background gradients only; no logic was changed.
+
 ## Setup
 No build tools or dependencies are required.
 
@@ -40,7 +43,7 @@ The entire application is in `index.html`, structured as follows:
 
 - Head
   - Meta tags and responsive viewport.
-  - Embedded CSS with a modern, minimal design using system fonts, CSS variables, and accessible color contrast.
+  - Embedded CSS with a modern, ultra-dark theme using system fonts, CSS variables, and accessible color contrast.
 
 - Body
   - Header with title and the optional URL banner (populated when `?url=...` is supplied and valid).
